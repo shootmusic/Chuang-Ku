@@ -8,39 +8,32 @@ export async function GET(request) {
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    
+
     const decoded = verifyToken(token)
     if (!decoded) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
-    
+
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      include: {
-        stores: true
-      }
+      include: { stores: true }
     })
-    
+
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       user: {
         id: user.id,
         username: user.username,
         email: user.email,
-        telegramUsername: user.telegramUsername,
         createdAt: user.createdAt,
         hasStore: user.stores.length > 0
       }
     })
-    
   } catch (error) {
     console.error('Auth me error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

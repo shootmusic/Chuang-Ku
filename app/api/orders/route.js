@@ -23,9 +23,14 @@ export async function POST(request) {
     const decoded = verifyToken(token)
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { paymentMethod, buyerTelegram, buyerPhone, buyerEmail, notes, cartItems } = await request.json()
+    const { paymentMethod, buyerTelegram, buyerPhone, buyerEmail, notes, shippingAddress, cartItems } = await request.json()
 
     if (!cartItems || cartItems.length === 0) return NextResponse.json({ error: 'Keranjang kosong' }, { status: 400 })
+
+    const hasPhysical = cartItems.some(i => i.product.productType === 'physical')
+    if (hasPhysical && !shippingAddress) {
+      return NextResponse.json({ error: 'Alamat pengiriman wajib diisi untuk produk fisik' }, { status: 400 })
+    }
 
     const storeId = cartItems[0].product.storeId
     const store = await prisma.store.findUnique({ where: { id: storeId } })
@@ -46,25 +51,26 @@ export async function POST(request) {
         buyerPhone: buyerPhone || null,
         buyerEmail: buyerEmail || null,
         notes: notes || null,
+        shippingAddress: shippingAddress || null,
         orderItems: {
           create: cartItems.map(i => ({
             productId: i.product.id,
             quantity: i.quantity,
             priceAtTime: i.product.price
           }))
+        },
+        logs: {
+          create: { status: 'pending', note: 'Order dibuat' }
         }
       },
       include: { orderItems: { include: { product: true } } }
     })
 
-    // Hapus cart
     try { await prisma.cart.deleteMany({ where: { userId: decoded.id } }) } catch(e) {}
 
-    // Kirim pesan ke buyer via Telegram
-    const buyerContact = buyerTelegram || buyerEmail
     if (buyerTelegram) {
       const productList = cartItems.map(i => `• ${i.product.name} x${i.quantity}`).join('\n')
-      
+
       let paymentInfo = ''
       if (paymentMethod === 'saweria' && store.saweriaUrl) {
         paymentInfo = `💳 Bayar via Saweria:\n${store.saweriaUrl}`
@@ -75,10 +81,8 @@ export async function POST(request) {
       } else if (paymentMethod === 'transfer' && store.bankAccount) {
         paymentInfo = `💳 Transfer ke ${store.bankName || 'Bank'}: ${store.bankAccount}`
       } else {
-        paymentInfo = `💳 Metode: ${paymentMethod?.toUpperCase()}\nHubungi penjual untuk info pembayaran lebih lanjut`
+        paymentInfo = `💳 Metode: ${paymentMethod?.toUpperCase()}`
       }
-      // Fallback: pastikan selalu ada info
-      if (!paymentInfo) paymentInfo = `💳 Metode: ${paymentMethod?.toUpperCase()}`
 
       await sendTelegram(buyerTelegram,
         `Halo! Pesanan baru dari <b>Chuàng Kù 创库</b>\n\n` +

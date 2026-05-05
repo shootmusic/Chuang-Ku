@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -19,41 +20,41 @@ model User {
 }
 
 model Store {
-  id             Int       @id @default(autoincrement())
-  userId         Int
-  storeName      String
+  id               Int       @id @default(autoincrement())
+  userId           Int
+  storeName        String
   storeDescription String?
-  paymentMethods String?
-  paymentDetails String?
-  telegramChatId String?
-  isVerified     Boolean   @default(false)
-  saweriaUrl     String?
-  qrisUrl        String?
-  gopayNumber    String?
-  bankAccount    String?
-  bankName       String?
-  createdAt      DateTime  @default(now())
-  user           User      @relation(fields: [userId], references: [id])
-  products       Product[]
-  orders         Order[]
+  paymentMethods   String?
+  paymentDetails   String?
+  telegramChatId   String?
+  isVerified       Boolean   @default(false)
+  saweriaUrl       String?
+  qrisUrl          String?
+  gopayNumber      String?
+  bankAccount      String?
+  bankName         String?
+  createdAt        DateTime  @default(now())
+  user             User      @relation(fields: [userId], references: [id])
+  products         Product[]
+  orders           Order[]
 }
 
 model Product {
-  id          Int         @id @default(autoincrement())
-  storeId     Int
-  name        String
-  description String?
-  price       Int
-  stock       Int         @default(999)
-  productType String      @default("digital")
-  fileUrl     String?
-  fileName    String?
+  id           Int         @id @default(autoincrement())
+  storeId      Int
+  name         String
+  description  String?
+  price        Int
+  stock        Int         @default(999)
+  productType  String      @default("digital")
+  fileUrl      String?
+  fileName     String?
   filePublicId String?
-  imageUrl    String?
-  createdAt   DateTime    @default(now())
-  store       Store       @relation(fields: [storeId], references: [id])
-  carts       Cart[]
-  orderItems  OrderItem[]
+  imageUrl     String?
+  createdAt    DateTime    @default(now())
+  store        Store       @relation(fields: [storeId], references: [id])
+  carts        Cart[]
+  orderItems   OrderItem[]
 }
 
 model Cart {
@@ -66,31 +67,45 @@ model Cart {
 }
 
 model Order {
-  id              Int         @id @default(autoincrement())
-  orderNumber     String      @unique
+  id              Int        @id @default(autoincrement())
+  orderNumber     String     @unique
   userId          Int
   storeId         Int
   totalAmount     Int
-  status          String      @default("pending")
+  status          String     @default("pending")
   paymentMethod   String?
   paymentProof    String?
   buyerTelegram   String?
   buyerPhone      String?
   buyerEmail      String?
   notes           String?
+  shippingAddress String?
+  trackingNumber  String?
   confirmedAt     DateTime?
-  createdAt       DateTime    @default(now())
-  user            User        @relation(fields: [userId], references: [id])
-  store           Store       @relation(fields: [storeId], references: [id])
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime   @default(now())
+  user            User       @relation(fields: [userId], references: [id])
+  store           Store      @relation(fields: [storeId], references: [id])
   orderItems      OrderItem[]
+  logs            OrderLog[]
 }
 
 model OrderItem {
-  id        Int     @id @default(autoincrement())
-  orderId   Int
-  productId Int
-  quantity  Int
+  id          Int     @id @default(autoincrement())
+  orderId     Int
+  productId   Int
+  quantity    Int
   priceAtTime Int
-  order     Order   @relation(fields: [orderId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
+  order       Order   @relation(fields: [orderId], references: [id])
+  product     Product @relation(fields: [productId], references: [id])
+}
+
+model OrderLog {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  status    String
+  note      String?
+  createdAt DateTime @default(now())
+  order     Order    @relation(fields: [orderId], references: [id])
 }

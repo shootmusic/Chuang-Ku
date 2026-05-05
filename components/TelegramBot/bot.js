@@ -1,29 +1,30 @@
-// Ini untuk referensi, ga perlu di-run di Next.js
-// Bot dijalankan via webhook di app/api/telegram/webhook
+/**
+ * DOKUMENTASI BOT COMMANDS
+ * Bot dijalankan via webhook di app/api/telegram/webhook/route.js
+ * File ini hanya referensi command dan format pesan
+ */
 
 export const BOT_COMMANDS = [
-  { command: 'start', description: 'Mulai bot' },
-  { command: 'confirm', description: 'Konfirmasi pesanan (format: /confirm INV-XXX)' },
-  { command: 'reject', description: 'Tolak pesanan (format: /reject INV-XXX)' },
-  { command: 'mystore', description: 'Info toko kamu' },
-  { command: 'orders', description: 'Lihat pesanan masuk' },
-  { command: 'help', description: 'Bantuan' }
+  { command: 'start', description: 'Mulai bot & lihat info akun' },
+  { command: 'id', description: 'Cek Telegram ID kamu' },
 ]
 
-export const BOT_MESSAGES = {
-  start: (username) => `Halo @${username}! Selamat datang di Chuàng Kù Bot.
+export const BOT_FORMATS = {
+  // Buyer kirim alamat pengiriman
+  address: 'ALAMAT#[ORDER_NUMBER]#[Nama, Jalan, Kel, Kec, Kota, Provinsi, Kodepos, No HP]',
+  // Seller input nomor resi
+  tracking: 'RESI#[ORDER_NUMBER]#[NAMA_KURIR]#[NOMOR_RESI]',
+  // Cek status order
+  checkOrder: 'Ketik order number, contoh: CK1234567890ABCD',
+}
 
-Gue bakal notif kalo ada pembayaran masuk. Lu juga bisa:
-/confirm [order_id] - Konfirmasi pesanan
-/reject [order_id] - Tolak pesanan  
-/mystore - Info toko lu
-/orders - Lihat pesanan`,
-
-  help: `*Chuàng Kù Bot Commands*
-/start - Mulai bot
-/confirm INV-XXX - Konfirmasi pesanan
-/reject INV-XXX - Tolak pesanan
-/mystore - Info toko kamu
-/orders - Lihat pesanan masuk
-/help - Bantuan ini`
+export const ORDER_STATUS = {
+  pending: 'Menunggu pembayaran',
+  waiting_confirmation: 'Bukti bayar diterima, menunggu konfirmasi seller',
+  confirmed: 'Pembayaran dikonfirmasi',
+  waiting_address: 'Menunggu alamat pengiriman (produk fisik)',
+  processing: 'Alamat diterima, seller memproses',
+  shipped: 'Sudah dikirim',
+  delivered: 'Sudah diterima',
+  rejected: 'Pembayaran ditolak',
 }

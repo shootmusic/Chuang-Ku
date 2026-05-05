@@ -9,6 +9,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -59,11 +60,39 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit}>
         <div style={{marginBottom:'16px'}}>
           <label style={{display:'block', fontSize:'12px', fontWeight:'600', marginBottom:'7px', color:'rgba(255,255,255,0.6)', textTransform:'uppercase', letterSpacing:'0.5px'}}>Username</label>
-          <input className="input-field" type="text" placeholder="Masukkan username" value={form.username} onChange={(e) => setForm({...form, username: e.target.value})} required />
+          <input
+            className="input-field"
+            type="text"
+            placeholder="Masukkan username"
+            value={form.username}
+            onChange={(e) => setForm({...form, username: e.target.value})}
+            required
+          />
         </div>
         <div style={{marginBottom:'10px'}}>
           <label style={{display:'block', fontSize:'12px', fontWeight:'600', marginBottom:'7px', color:'rgba(255,255,255,0.6)', textTransform:'uppercase', letterSpacing:'0.5px'}}>Password</label>
-          <input className="input-field" type="password" placeholder="Masukkan password" value={form.password} onChange={(e) => setForm({...form, password: e.target.value})} required />
+          <div style={{position:'relative'}}>
+            <input
+              className="input-field"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Masukkan password"
+              value={form.password}
+              onChange={(e) => setForm({...form, password: e.target.value})}
+              style={{paddingRight:'44px', width:'100%', boxSizing:'border-box'}}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position:'absolute', right:'12px', top:'50%', transform:'translateY(-50%)',
+                background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.5)',
+                fontSize:'18px', padding:'0', lineHeight:'1'
+              }}
+            >
+              {showPassword ? '🙈' : '👁️'}
+            </button>
+          </div>
         </div>
         <div style={{textAlign:'right', marginBottom:'22px'}}>
           <Link href="/forgot-password" style={{fontSize:'12px', color:'#a78bfa', textDecoration:'none', fontWeight:'600'}}>Lupa password?</Link>

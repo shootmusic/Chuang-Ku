@@ -1,0 +1,19 @@
+-- Tambah kolom untuk produk fisik
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "shippingAddress" TEXT;
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "trackingNumber" TEXT;
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "shippedAt" TIMESTAMP;
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "deliveredAt" TIMESTAMP;
+
+-- Audit trail
+CREATE TABLE IF NOT EXISTS "OrderLog" (
+  "id" SERIAL NOT NULL,
+  "orderId" INTEGER NOT NULL,
+  "status" TEXT NOT NULL,
+  "note" TEXT,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "OrderLog_pkey" PRIMARY KEY ("id")
+);
+
+ALTER TABLE "OrderLog" ADD CONSTRAINT "OrderLog_orderId_fkey"
+  FOREIGN KEY ("orderId") REFERENCES "Order"("id")
+  ON DELETE RESTRICT ON UPDATE CASCADE;

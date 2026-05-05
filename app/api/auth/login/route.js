@@ -10,7 +10,14 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Username dan password harus diisi' }, { status: 400 })
     }
 
-    const user = await prisma.user.findUnique({ where: { username } })
+    const user = await prisma.user.findFirst({
+      where: {
+        username: {
+          equals: username,
+          mode: 'insensitive'
+        }
+      }
+    })
 
     if (!user) {
       return NextResponse.json({ error: 'Username atau password salah' }, { status: 401 })

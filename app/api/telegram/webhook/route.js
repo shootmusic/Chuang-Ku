@@ -27,6 +27,10 @@ async function forwardDocument(chatId, fileId, caption, extra = {}) {
   })
 }
 
+async function addOrderLog(orderId, status, note) {
+  await prisma.orderLog.create({ data: { orderId, status, note } })
+}
+
 export async function POST(request) {
   try {
     const body = await request.json()
@@ -35,24 +39,21 @@ export async function POST(request) {
     if (body.callback_query) {
       const data = body.callback_query.data
       const callbackChatId = body.callback_query.from.id
-
       if (data.startsWith('confirm_') || data.startsWith('reject_')) {
         const action = data.startsWith('confirm_') ? 'confirm' : 'reject'
         const orderNumber = data.replace('confirm_', '').replace('reject_', '')
-
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://chuangku.ricossh.cloud'
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL
         await fetch(`${baseUrl}/api/orders/confirm`, {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ orderNumber, action, sellerChatId: callbackChatId })
         })
-
         await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({
             callback_query_id: body.callback_query.id,
-            text: action === 'confirm' ? 'Pesanan dikonfirmasi!' : 'Pesanan ditolak'
+            text: action === 'confirm' ? '✅ Pesanan dikonfirmasi!' : '❌ Pesanan ditolak'
           })
         })
       }
@@ -70,31 +71,126 @@ export async function POST(request) {
 
     // Handle /start
     if (text === '/start') {
-      const usernameText = fromUsername ? `@${fromUsername}` : `ID: ${fromId}`
       await sendTelegram(chatId,
         `Halo, <b>${fromFirstName}</b>! 👋\n\n` +
         `Selamat datang di <b>Chuàng Kù</b> — Marketplace Digital.\n\n` +
         `Info akun kamu:\n` +
         `• Nama: <b>${fromFirstName}</b>\n` +
-        `• Username: <b>${usernameText}</b>\n` +
+        `• Username: <b>${fromUsername ? '@'+fromUsername : 'tidak ada'}</b>\n` +
         `• Telegram ID: <code>${fromId}</code>\n\n` +
-        `Gunakan ID <code>${fromId}</code> saat checkout untuk menerima produk via Telegram.\n\n` +
-        `Belanja sekarang di:\n<b>chuangku.ricossh.cloud</b>\n\n` +
-        `Jika sudah bayar, kirim screenshot bukti pembayaran ke sini ya!`
+        `Gunakan ID <code>${fromId}</code> saat checkout.\n\n` +
+        `Belanja di: <b>${process.env.NEXT_PUBLIC_APP_URL}</b>`
       )
       return NextResponse.json({ ok: true })
     }
 
-    // Handle /id - cek ID telegram
+    // Handle /id
     if (text === '/id') {
-      const usernameText = fromUsername ? `@${fromUsername}` : 'tidak ada'
       await sendTelegram(chatId,
         `Info Telegram kamu:\n\n` +
         `• Nama: <b>${fromFirstName}</b>\n` +
-        `• Username: <b>${usernameText}</b>\n` +
+        `• Username: <b>${fromUsername ? '@'+fromUsername : 'tidak ada'}</b>\n` +
         `• Telegram ID: <code>${fromId}</code>\n\n` +
         `Gunakan ID <code>${fromId}</code> saat checkout.`
       )
+      return NextResponse.json({ ok: true })
+    }
+
+    // Handle input alamat pengiriman — format: ALAMAT#CKXXX#isi alamat
+    if (text.startsWith('ALAMAT#')) {
+      const parts = text.split('#')
+      if (parts.length >= 3) {
+        const orderNumber = parts[1].toUpperCase()
+        const shippingAddress = parts.slice(2).join('#')
+
+        const order = await prisma.order.findUnique({
+          where: { orderNumber },
+          include: { store: true }
+        })
+
+        if (!order) {
+          await sendTelegram(chatId, `❌ Order <code>${orderNumber}</code> tidak ditemukan.`)
+          return NextResponse.json({ ok: true })
+        }
+
+        await prisma.order.update({
+          where: { orderNumber },
+          data: { shippingAddress, status: 'processing' }
+        })
+
+        await addOrderLog(order.id, 'processing', `Alamat diterima: ${shippingAddress}`)
+
+        await sendTelegram(chatId,
+          `✅ Alamat pengiriman diterima!\n\n` +
+          `Order: <code>${orderNumber}</code>\n` +
+          `Alamat: <b>${shippingAddress}</b>\n\n` +
+          `Penjual akan segera memproses pengiriman.`
+        )
+
+        // Forward alamat ke seller
+        if (order.store.telegramChatId) {
+          await sendTelegram(order.store.telegramChatId,
+            `📦 <b>Alamat Pengiriman Masuk!</b>\n\n` +
+            `Order: <code>${orderNumber}</code>\n` +
+            `Pembeli: ${fromUsername ? '@'+fromUsername : fromId}\n\n` +
+            `<b>Alamat:</b>\n${shippingAddress}\n\n` +
+            `Setelah kirim, input resi dengan format:\n` +
+            `<code>RESI#${orderNumber}#NamaPengiriman#NomorResi</code>`
+          )
+        }
+      }
+      return NextResponse.json({ ok: true })
+    }
+
+    // Handle input resi dari seller — format: RESI#CKXXX#JNE#123456
+    if (text.startsWith('RESI#')) {
+      const parts = text.split('#')
+      if (parts.length >= 4) {
+        const orderNumber = parts[1].toUpperCase()
+        const courierName = parts[2]
+        const trackingNumber = parts[3]
+
+        const order = await prisma.order.findUnique({
+          where: { orderNumber },
+          include: { store: true }
+        })
+
+        if (!order) {
+          await sendTelegram(chatId, `❌ Order <code>${orderNumber}</code> tidak ditemukan.`)
+          return NextResponse.json({ ok: true })
+        }
+
+        // Verifikasi yang input resi adalah seller toko ini
+        if (order.store.telegramChatId !== chatId.toString()) {
+          await sendTelegram(chatId, `❌ Kamu bukan penjual order ini.`)
+          return NextResponse.json({ ok: true })
+        }
+
+        await prisma.order.update({
+          where: { orderNumber },
+          data: { trackingNumber: `${courierName}#${trackingNumber}`, status: 'shipped', shippedAt: new Date() }
+        })
+
+        await addOrderLog(order.id, 'shipped', `Resi: ${courierName} - ${trackingNumber}`)
+
+        await sendTelegram(chatId,
+          `✅ Resi berhasil diinput!\n\n` +
+          `Order: <code>${orderNumber}</code>\n` +
+          `Kurir: <b>${courierName}</b>\n` +
+          `No. Resi: <code>${trackingNumber}</code>`
+        )
+
+        // Forward resi ke buyer
+        if (order.buyerTelegram) {
+          await sendTelegram(order.buyerTelegram,
+            `🚚 <b>Pesanan Kamu Sudah Dikirim!</b>\n\n` +
+            `Order: <code>${orderNumber}</code>\n` +
+            `Kurir: <b>${courierName}</b>\n` +
+            `No. Resi: <code>${trackingNumber}</code>\n\n` +
+            `Cek status pengiriman di website kurir ya! 📦`
+          )
+        }
+      }
       return NextResponse.json({ ok: true })
     }
 
@@ -118,8 +214,8 @@ export async function POST(request) {
 
       if (pendingOrders.length === 0) {
         await sendTelegram(chatId,
-          `Hmm, gue tidak menemukan pesanan pending dari kamu.\n\n` +
-          `Pastikan kamu sudah checkout di website dan masukkan:\n` +
+          `Hmm, tidak ada pesanan pending dari kamu.\n\n` +
+          `Pastikan sudah checkout dan masukkan:\n` +
           `• Username: <b>${fromUsername ? '@'+fromUsername : '-'}</b>\n` +
           `• Atau ID: <code>${fromId}</code>`
         )
@@ -135,20 +231,22 @@ export async function POST(request) {
         data: { paymentProof: fileId, status: 'waiting_confirmation' }
       })
 
+      await addOrderLog(order.id, 'waiting_confirmation', 'Bukti pembayaran diterima dari buyer')
+
       await sendTelegram(chatId,
-        `Bukti pembayaran diterima!\n\n` +
+        `✅ Bukti pembayaran diterima!\n\n` +
         `Order: <code>${order.orderNumber}</code>\n` +
         `Total: <b>Rp${order.totalAmount.toLocaleString('id-ID')}</b>\n\n` +
-        `Penjual sedang mengecek pembayaranmu. Harap tunggu konfirmasi ya, <b>${fromFirstName}</b>!`
+        `Penjual sedang mengecek. Harap tunggu ya, <b>${fromFirstName}</b>!`
       )
 
       if (order.store.telegramChatId) {
         const productList = order.orderItems.map(i => `• ${i.product.name} x${i.quantity}`).join('\n')
         const caption =
-          `<b>Bukti Pembayaran Masuk!</b>\n\n` +
+          `<b>💰 Bukti Pembayaran Masuk!</b>\n\n` +
           `Order: <code>${order.orderNumber}</code>\n` +
           `Pembeli: <b>${fromFirstName}</b> (${fromUsername ? '@'+fromUsername : 'no username'})\n` +
-          `Telegram ID: <code>${fromId}</code>\n\n` +
+          `ID: <code>${fromId}</code>\n\n` +
           `<b>Produk:</b>\n${productList}\n\n` +
           `<b>Total: Rp${order.totalAmount.toLocaleString('id-ID')}</b>\n` +
           `Metode: ${order.paymentMethod?.toUpperCase()}\n\n` +
@@ -156,8 +254,8 @@ export async function POST(request) {
 
         const keyboard = {
           inline_keyboard: [[
-            { text: 'Konfirmasi Pembayaran', callback_data: `confirm_${order.orderNumber}` },
-            { text: 'Tolak', callback_data: `reject_${order.orderNumber}` }
+            { text: '✅ Konfirmasi', callback_data: `confirm_${order.orderNumber}` },
+            { text: '❌ Tolak', callback_data: `reject_${order.orderNumber}` }
           ]]
         }
 
@@ -175,12 +273,17 @@ export async function POST(request) {
     const orderMatch = text.match(/CK\w+/i)
     if (orderMatch) {
       const orderNumber = orderMatch[0].toUpperCase()
-      const order = await prisma.order.findUnique({ where: { orderNumber } })
+      const order = await prisma.order.findUnique({
+        where: { orderNumber },
+        include: { logs: { orderBy: { createdAt: 'desc' }, take: 3 } }
+      })
       if (order) {
+        const logText = order.logs.map(l => `• ${l.status} — ${new Date(l.createdAt).toLocaleString('id-ID')}`).join('\n')
         await sendTelegram(chatId,
-          `Status Order <code>${orderNumber}</code>:\n` +
+          `📦 Status Order <code>${orderNumber}</code>:\n` +
           `Status: <b>${order.status}</b>\n` +
-          `Total: Rp${order.totalAmount.toLocaleString('id-ID')}`
+          `Total: Rp${order.totalAmount.toLocaleString('id-ID')}\n\n` +
+          `<b>History:</b>\n${logText || '-'}`
         )
         return NextResponse.json({ ok: true })
       }
@@ -188,12 +291,11 @@ export async function POST(request) {
 
     // Default reply
     await sendTelegram(chatId,
-      `Halo <b>${fromFirstName}</b>!\n\n` +
-      `Kirimkan bukti pembayaran (screenshot) ke sini setelah melakukan pembayaran.\n\n` +
-      `Info akun kamu:\n` +
-      `• ID: <code>${fromId}</code>\n` +
-      `• Username: ${fromUsername ? '@'+fromUsername : 'tidak ada'}\n\n` +
-      `Atau kunjungi <b>chuangku.ricossh.cloud</b> untuk belanja.`
+      `Halo <b>${fromFirstName}</b>! 👋\n\n` +
+      `Kirim screenshot bukti pembayaran setelah transfer.\n\n` +
+      `ID kamu: <code>${fromId}</code>\n` +
+      `Username: ${fromUsername ? '@'+fromUsername : 'tidak ada'}\n\n` +
+      `Belanja di: <b>${process.env.NEXT_PUBLIC_APP_URL}</b>`
     )
 
     return NextResponse.json({ ok: true })

@@ -20,6 +20,10 @@ export default function OrdersPage() {
     pending: '#fbbf24',
     waiting_confirmation: '#60a5fa',
     confirmed: '#4ade80',
+    waiting_address: '#f97316',
+    processing: '#a78bfa',
+    shipped: '#22d3ee',
+    delivered: '#4ade80',
     rejected: '#f87171'
   }[s] || '#a78bfa')
 
@@ -27,10 +31,18 @@ export default function OrdersPage() {
     pending: 'Menunggu Pembayaran',
     waiting_confirmation: 'Menunggu Konfirmasi',
     confirmed: 'Dikonfirmasi',
+    waiting_address: 'Menunggu Alamat',
+    processing: 'Diproses',
+    shipped: 'Dikirim',
+    delivered: 'Selesai',
     rejected: 'Ditolak'
   }[s] || s)
 
-  if (loading) return <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'80vh'}}><div style={{width:'32px',height:'32px',border:'3px solid rgba(167,139,250,0.3)',borderTop:'3px solid #a78bfa',borderRadius:'50%'}}/></div>
+  if (loading) return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'80vh'}}>
+      <div style={{width:'32px',height:'32px',border:'3px solid rgba(167,139,250,0.3)',borderTop:'3px solid #a78bfa',borderRadius:'50%'}}/>
+    </div>
+  )
 
   return (
     <div style={{padding:'20px 16px',paddingBottom:'90px'}}>
@@ -58,10 +70,30 @@ export default function OrdersPage() {
                   {statusLabel(order.status)}
                 </span>
               </div>
+
+              {/* Info tambahan berdasarkan status */}
+              {order.status === 'shipped' && order.trackingNumber && (
+                <div style={{background:'rgba(34,211,238,0.1)',border:'1px solid rgba(34,211,238,0.2)',borderRadius:'10px',padding:'10px',marginBottom:'10px'}}>
+                  <p style={{fontSize:'12px',color:'#67e8f9',margin:0}}>
+                    🚚 Resi: <b>{order.trackingNumber.replace('#',' - ')}</b>
+                  </p>
+                </div>
+              )}
+
+              {order.status === 'waiting_address' && (
+                <div style={{background:'rgba(249,115,22,0.1)',border:'1px solid rgba(249,115,22,0.2)',borderRadius:'10px',padding:'10px',marginBottom:'10px'}}>
+                  <p style={{fontSize:'12px',color:'#fdba74',margin:'0 0 6px'}}>📦 Kirim alamat pengiriman ke bot Telegram:</p>
+                  <p style={{fontSize:'11px',color:'rgba(255,255,255,0.5)',fontFamily:'monospace',margin:0,wordBreak:'break-all'}}>
+                    ALAMAT#{order.orderNumber}#Nama, Jalan, Kel, Kec, Kota, Provinsi, Kodepos, NoHP
+                  </p>
+                </div>
+              )}
+
               <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:'10px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                 <p style={{fontSize:'12px',color:'rgba(255,255,255,0.4)',margin:0}}>{new Date(order.createdAt).toLocaleDateString('id-ID')}</p>
                 <p style={{fontSize:'16px',fontWeight:'800',color:'white',margin:0}}>Rp{order.totalAmount.toLocaleString('id-ID')}</p>
               </div>
+
               {order.status === 'pending' && (
                 <button onClick={() => router.push(`/dashboard/payment/${order.orderNumber}`)} style={{width:'100%',marginTop:'12px',padding:'10px',borderRadius:'10px',background:'linear-gradient(135deg,#7c3aed,#5b21b6)',border:'none',cursor:'pointer',color:'white',fontSize:'13px',fontWeight:'700'}}>
                   Lanjut Bayar
