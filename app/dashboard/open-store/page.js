@@ -52,10 +52,9 @@ export default function OpenStorePage() {
 
   return (
     <div style={{padding:'24px 16px',paddingBottom:'40px',maxWidth:'500px',margin:'0 auto'}}>
-      <h1 style={{fontSize:'20px',fontWeight:'800',color:'white',marginBottom:'24px'}}>🏪 Buka Toko</h1>
+      <h1 style={{fontSize:'20px',fontWeight:'800',color:'white',marginBottom:'24px'}}>Buka Toko</h1>
 
       <form onSubmit={handleSubmit}>
-        {/* Info Toko */}
         <div style={{background:'rgba(255,255,255,0.05)',borderRadius:'16px',padding:'20px',border:'1px solid rgba(255,255,255,0.08)',marginBottom:'16px'}}>
           <h2 style={{fontSize:'14px',fontWeight:'700',color:'#a78bfa',marginBottom:'16px',textTransform:'uppercase',letterSpacing:'0.5px'}}>Informasi Toko</h2>
           {label('Nama Toko', true)}
@@ -64,7 +63,6 @@ export default function OpenStorePage() {
           <textarea value={form.storeDescription} onChange={e=>set('storeDescription',e.target.value)} placeholder="Deskripsi singkat toko kamu" rows="3" style={{...inputStyle,resize:'none'}}/>
         </div>
 
-        {/* Telegram */}
         <div style={{background:'rgba(255,255,255,0.05)',borderRadius:'16px',padding:'20px',border:'1px solid rgba(255,255,255,0.08)',marginBottom:'16px'}}>
           <h2 style={{fontSize:'14px',fontWeight:'700',color:'#a78bfa',marginBottom:'16px',textTransform:'uppercase',letterSpacing:'0.5px'}}>Integrasi Telegram</h2>
           {label('Telegram Chat ID', true)}
@@ -74,29 +72,23 @@ export default function OpenStorePage() {
           </p>
         </div>
 
-        {/* Payment */}
         <div style={{background:'rgba(255,255,255,0.05)',borderRadius:'16px',padding:'20px',border:'1px solid rgba(255,255,255,0.08)',marginBottom:'24px'}}>
           <h2 style={{fontSize:'14px',fontWeight:'700',color:'#a78bfa',marginBottom:'4px',textTransform:'uppercase',letterSpacing:'0.5px'}}>Info Pembayaran</h2>
           <p style={{fontSize:'12px',color:'rgba(255,255,255,0.35)',marginBottom:'16px'}}>Isi sesuai metode yang kamu punya (minimal 1)</p>
-
           {label('Link Saweria')}
           <input style={inputStyle} type="text" placeholder="https://saweria.co/username" value={form.saweriaUrl} onChange={e=>set('saweriaUrl',e.target.value)}/>
-
           {label('URL Gambar QRIS')}
           <input style={inputStyle} type="text" placeholder="https://..." value={form.qrisUrl} onChange={e=>set('qrisUrl',e.target.value)}/>
-
           {label('Nomor GoPay')}
           <input style={inputStyle} type="text" placeholder="08xxxxxxxxxx" value={form.gopayNumber} onChange={e=>set('gopayNumber',e.target.value)}/>
-
           {label('Nama Bank')}
           <input style={inputStyle} type="text" placeholder="BCA / BRI / Mandiri" value={form.bankName} onChange={e=>set('bankName',e.target.value)}/>
-
           {label('Nomor Rekening')}
           <input style={inputStyle} type="text" placeholder="1234567890" value={form.bankAccount} onChange={e=>set('bankAccount',e.target.value)}/>
         </div>
 
         <button type="submit" disabled={loading} style={{width:'100%',background:'linear-gradient(135deg,#7c3aed,#5b21b6)',color:'white',padding:'14px',borderRadius:'12px',border:'none',cursor:'pointer',fontSize:'15px',fontWeight:'700',opacity:loading?0.7:1}}>
-          {loading ? 'Memproses...' : 'Buat Toko Sekarang 🚀'}
+          {loading ? 'Memproses...' : 'Buat Toko Sekarang'}
         </button>
       </form>
     </div>

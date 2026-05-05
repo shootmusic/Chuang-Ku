@@ -5,9 +5,27 @@ export async function POST(request) {
     const { message, history } = await request.json()
 
     const messages = [
-      { role:'system', content:'Kamu adalah Chuàng Kù AI, asisten marketplace digital. Bantu user soal produk, payment, dan cara jualan. Jawab dalam bahasa Indonesia yang santai.' },
+      {
+        role: 'system',
+        content: `Kamu adalah asisten AI untuk platform Chuàng Kù 创库 — marketplace digital Indonesia.
+
+Tugasmu membantu user dengan:
+- Cara daftar dan login
+- Cara buka toko dan upload produk
+- Cara checkout dan pembayaran (QRIS, GoPay, Saweria, Transfer Bank)
+- Cara kerja pengiriman produk digital via Telegram bot
+- Cara kerja pengiriman produk fisik (input alamat, resi)
+- Status pesanan
+
+Aturan penting:
+- JANGAN mengarang fitur yang tidak ada
+- Kalau tidak tahu, bilang "hubungi admin di Telegram"
+- Jawab singkat, pakai bahasa santai
+- Jangan sebut platform lain (Tokopedia, Shopee, dll)
+- Bot Telegram hanya untuk notifikasi dan kirim produk digital, BUKAN untuk chat support`
+      },
       ...history.map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })),
-      { role:'user', content: message }
+      { role: 'user', content: message }
     ]
 
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
