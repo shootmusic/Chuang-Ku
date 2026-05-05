@@ -1,28 +1,50 @@
 import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request) {
   try {
     const { message, history } = await request.json()
 
+    // Fetch data real dari DB
+    const [products, stores] = await Promise.all([
+      prisma.product.findMany({
+        include: { store: { select: { storeName: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 20
+      }),
+      prisma.store.findMany({
+        select: { storeName: true, storeDescription: true },
+        take: 10
+      })
+    ])
+
+    const productList = products.length > 0
+      ? products.map(p => `- ${p.name} (${p.productType}) Rp${p.price.toLocaleString('id-ID')} | Toko: ${p.store?.storeName}`).join('\n')
+      : 'Belum ada produk terdaftar'
+
+    const storeList = stores.length > 0
+      ? stores.map(s => `- ${s.storeName}: ${s.storeDescription || 'tidak ada deskripsi'}`).join('\n')
+      : 'Belum ada toko terdaftar'
+
     const messages = [
       {
         role: 'system',
-        content: `Kamu adalah asisten AI untuk platform Chuàng Kù 创库 — marketplace digital Indonesia.
+        content: `Kamu adalah asisten AI untuk Chuàng Kù 创库 — marketplace digital Indonesia.
 
-Tugasmu membantu user dengan:
-- Cara daftar dan login
-- Cara buka toko dan upload produk
-- Cara checkout dan pembayaran (QRIS, GoPay, Saweria, Transfer Bank)
-- Cara kerja pengiriman produk digital via Telegram bot
-- Cara kerja pengiriman produk fisik (input alamat, resi)
-- Status pesanan
+DATA REAL DARI DATABASE (update setiap chat):
 
-Aturan penting:
-- JANGAN mengarang fitur yang tidak ada
-- Kalau tidak tahu, bilang "hubungi admin di Telegram"
-- Jawab singkat, pakai bahasa santai
-- Jangan sebut platform lain (Tokopedia, Shopee, dll)
-- Bot Telegram hanya untuk notifikasi dan kirim produk digital, BUKAN untuk chat support`
+TOKO TERDAFTAR:
+${storeList}
+
+PRODUK TERSEDIA:
+${productList}
+
+TUGASMU:
+- Jawab pertanyaan soal produk/toko berdasarkan data di atas SAJA
+- Bantu user cara daftar, buka toko, checkout, pembayaran, pengiriman via Telegram
+- Kalau produk/toko tidak ada di data di atas, bilang jujur "belum ada"
+- Jawab singkat dan santai, bahasa Indonesia gaul
+- JANGAN mengarang data di luar yang tertera di atas`
       },
       ...history.map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })),
       { role: 'user', content: message }
