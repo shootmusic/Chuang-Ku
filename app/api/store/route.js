@@ -34,6 +34,8 @@ export async function POST(request) {
         storeDescription: storeDescription || null,
         telegramChatId: String(telegramChatId),
         userId: decoded.id,
+        paymentMethods: '[]',
+        paymentDetails: '{}',
         saweriaUrl: saweriaUrl || null,
         qrisUrl: qrisUrl || null,
         gopayNumber: gopayNumber || null,
