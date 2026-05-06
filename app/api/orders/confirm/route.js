@@ -14,7 +14,7 @@ async function sendDocument(chatId, fileUrl, caption) {
   const token = process.env.TELEGRAM_BOT_TOKEN
   // Tambah fl_attachment untuk force download di Cloudinary
   const downloadUrl = fileUrl.includes('cloudinary.com') 
-    ? fileUrl.replace('/upload/', '/upload/fl_attachment/') 
+    ? fileUrl.replace('/image/upload/', '/raw/upload/fl_attachment/') 
     : fileUrl
   await fetch(`https://api.telegram.org/bot${token}/sendDocument`, {
     method: 'POST',
