@@ -22,7 +22,7 @@ export async function DELETE(request, { params }) {
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const store = await prisma.store.findFirst({ where: { userId: decoded.id } })
     if (!store) return NextResponse.json({ error: 'Toko tidak ditemukan' }, { status: 404 })
-    await prisma.product.delete({ where: { id: parseInt(params.id), storeId: store.id } })
+    await prisma.product.update({ where: { id: parseInt(params.id), storeId: store.id }, data: { isActive: false } })
     return NextResponse.json({ message: 'Produk dihapus' })
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })

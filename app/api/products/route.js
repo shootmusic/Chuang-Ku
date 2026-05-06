@@ -5,6 +5,7 @@ import { verifyToken } from '@/lib/auth'
 export async function GET() {
   try {
     const products = await prisma.product.findMany({
+      where: { isActive: true },
       include: { store: { select: { storeName: true } } },
       orderBy: { createdAt: 'desc' }
     })

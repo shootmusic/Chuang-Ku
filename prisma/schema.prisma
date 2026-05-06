@@ -51,6 +51,7 @@ model Product {
   fileName     String?
   filePublicId String?
   imageUrl     String?
+  isActive     Boolean     @default(true)
   createdAt    DateTime    @default(now())
   store        Store       @relation(fields: [storeId], references: [id])
   carts        Cart[]

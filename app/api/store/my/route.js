@@ -12,7 +12,7 @@ export async function GET(request) {
 
     const store = await prisma.store.findFirst({
       where: { userId: decoded.id },
-      include: { products: { orderBy: { createdAt: 'desc' } } }
+      include: { products: { where: { isActive: true }, orderBy: { createdAt: 'desc' } } }
     })
 
     if (!store) return NextResponse.json({ store: null }, { status: 200 })
