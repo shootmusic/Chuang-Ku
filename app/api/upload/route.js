@@ -11,7 +11,7 @@ export async function POST(request) {
     const { file, fileName, type } = await request.json()
     // file = base64 string
     const folder = type === 'product' ? 'products' : 'images'
-    const result = await uploadFile(file, folder)
+    const result = await uploadFile(file, folder, fileName)
 
     return NextResponse.json({ url: result.url, publicId: result.publicId, fileName })
   } catch (error) {
