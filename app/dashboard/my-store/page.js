@@ -113,8 +113,13 @@ export default function MyStorePage() {
   const deleteProduct = async (id) => {
     if (!confirm('Hapus produk ini?')) return
     const token = localStorage.getItem('token')
-    await fetch(`/api/products/${id}`, { method:'DELETE', headers:{'Authorization':`Bearer ${token}`} })
-    setProducts(products.filter(p => p.id !== id))
+    const res = await fetch(`/api/products/${id}`, { method:'DELETE', headers:{'Authorization':`Bearer ${token}`} })
+    if (res.ok) {
+      setProducts(products.filter(p => p.id !== id))
+    } else {
+      const d = await res.json()
+      alert('Gagal hapus: ' + (d.error || 'Unknown error'))
+    }
   }
 
   const statusColor = (s) => ({
