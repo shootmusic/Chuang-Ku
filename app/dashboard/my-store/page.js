@@ -231,7 +231,7 @@ export default function MyStorePage() {
                 {form.productType === 'digital' && (
                   <div style={{marginBottom:'12px'}}>
                     <label style={labelS}>File Produk *</label>
-                    <input ref={fileRef} type="file" accept=".pdf,.txt,.png,.jpg,.jpeg,.xlsx,.py,.zip" style={{display:'none'}} onChange={e => handleFileUpload(e, 'product')}/>
+                    <input ref={fileRef} type="file" accept=".pdf,.txt,.png,.jpg,.jpeg,.webp,.xlsx,.py,.zip,.doc,.docx,.mp4,.mov,.avi,.mkv" style={{display:'none'}} onChange={e => handleFileUpload(e, 'product')}/>
                     <button type="button" onClick={() => fileRef.current.click()} style={{width:'100%',padding:'12px',borderRadius:'10px',border:'2px dashed rgba(124,58,237,0.4)',background:'rgba(124,58,237,0.08)',color:form.fileUrl?'#4ade80':'#a78bfa',cursor:'pointer',fontSize:'13px',fontWeight:'600'}}>
                       {uploading ? 'Mengupload...' : form.fileUrl ? `✅ ${form.fileName}` : 'Klik untuk upload file produk'}
                     </button>
