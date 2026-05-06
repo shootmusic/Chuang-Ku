@@ -22,7 +22,25 @@ export async function DELETE(request, { params }) {
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const store = await prisma.store.findFirst({ where: { userId: decoded.id } })
     if (!store) return NextResponse.json({ error: 'Toko tidak ditemukan' }, { status: 404 })
-    await prisma.product.update({ where: { id: parseInt(params.id), storeId: store.id }, data: { isActive: false } })
+
+    // Cek apakah produk punya orderItems
+    const orderItems = await prisma.orderItem.findFirst({
+      where: { productId: parseInt(params.id) }
+    })
+
+    if (orderItems) {
+      // Soft delete — sembunyikan produk tapi data penjualan tetap
+      await prisma.product.update({
+        where: { id: parseInt(params.id), storeId: store.id },
+        data: { isActive: false }
+      })
+    } else {
+      // Hard delete — tidak ada data penjualan
+      await prisma.product.delete({
+        where: { id: parseInt(params.id), storeId: store.id }
+      })
+    }
+
     return NextResponse.json({ message: 'Produk dihapus' })
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -32,7 +50,6 @@ export async function DELETE(request, { params }) {
 export async function PATCH(request, { params }) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '')
-    const { verifyToken } = await import('@/lib/auth')
     const decoded = verifyToken(token)
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const data = await request.json()
