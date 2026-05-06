@@ -12,10 +12,14 @@ async function sendTelegram(chatId, text) {
 
 async function sendDocument(chatId, fileUrl, caption) {
   const token = process.env.TELEGRAM_BOT_TOKEN
+  // Tambah fl_attachment untuk force download di Cloudinary
+  const downloadUrl = fileUrl.includes('cloudinary.com') 
+    ? fileUrl.replace('/upload/', '/upload/fl_attachment/') 
+    : fileUrl
   await fetch(`https://api.telegram.org/bot${token}/sendDocument`, {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ chat_id: chatId, document: fileUrl, caption, parse_mode: 'HTML' })
+    body: JSON.stringify({ chat_id: chatId, document: downloadUrl, caption, parse_mode: 'HTML' })
   })
 }
 
@@ -29,9 +33,7 @@ async function sendPhoto(chatId, photoUrl, caption) {
 }
 
 async function addOrderLog(orderId, status, note) {
-  await prisma.orderLog.create({
-    data: { orderId, status, note }
-  })
+  await prisma.orderLog.create({ data: { orderId, status, note } })
 }
 
 export async function POST(request) {
@@ -64,11 +66,9 @@ export async function POST(request) {
           `Produk kamu sedang dikirim...`
         )
 
-        // Cek apakah ada produk digital
         const hasDigital = order.orderItems.some(i => i.product.productType === 'digital')
         const hasPhysical = order.orderItems.some(i => i.product.productType === 'physical')
 
-        // Kirim produk digital langsung
         for (const item of order.orderItems) {
           if (item.product.productType === 'digital' && item.product.fileUrl) {
             const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(item.product.fileName || '')
@@ -88,7 +88,6 @@ export async function POST(request) {
           )
         }
 
-        // Kalau ada produk fisik, minta alamat pengiriman
         if (hasPhysical && !order.shippingAddress) {
           await sendTelegram(order.buyerTelegram,
             `📦 <b>Info Pengiriman Produk Fisik</b>\n\n` +
@@ -99,7 +98,6 @@ export async function POST(request) {
         }
       }
 
-      // Notif ke penjual
       if (order.store.telegramChatId) {
         await sendTelegram(order.store.telegramChatId,
           `✅ Kamu sudah konfirmasi pesanan <code>${orderNumber}</code>.\n` +
